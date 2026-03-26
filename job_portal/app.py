@@ -15,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///jobportal.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads/resumes'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'doc', 'docx'}  # restrict file types
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -23,6 +24,46 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
+
+# -------------------- Helper Functions --------------------
+def allowed_file(filename):
+    """Check if the file has an allowed extension."""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def is_strong_password(password):
+    """Check password strength: min 8 chars, at least one uppercase, one lowercase, one digit, one special char."""
+    if len(password) < 8:
+        return False
+    if not re.search(r'[A-Z]', password):
+        return False
+    if not re.search(r'[a-z]', password):
+        return False
+    if not re.search(r'[0-9]', password):
+        return False
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False
+    return True
+
+def role_required(role):
+    """Decorator to restrict access to users with specific role."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.role != role:
+                flash('Access denied.', 'danger')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def save_resume(file, user_id):
+    """Save uploaded resume and return filename if valid."""
+    if file and file.filename and allowed_file(file.filename):
+        filename = secure_filename(f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return filename
+    return None
 
 # -------------------- Database Models --------------------
 class User(UserMixin, db.Model):
@@ -82,44 +123,12 @@ class Application(db.Model):
     applied_date = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='pending')  # pending, reviewed, rejected
 
-# -------------------- Helper Functions --------------------
-def is_strong_password(password):
-    """Check password strength: min 8 chars, at least one uppercase, one lowercase, one digit, one special char."""
-    if len(password) < 8:
-        return False
-    if not re.search(r'[A-Z]', password):
-        return False
-    if not re.search(r'[a-z]', password):
-        return False
-    if not re.search(r'[0-9]', password):
-        return False
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        return False
-    return True
-
-def role_required(role):
-    """Decorator to restrict access to users with specific role."""
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.role != role:
-                flash('Access denied.', 'danger')
-                return redirect(url_for('dashboard'))
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def save_resume(file, user_id):
-    """Save uploaded resume and return filename."""
-    if file and file.filename:
-        filename = secure_filename(f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return filename
-    return None
-
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return User.query.get(int(user_id))
+    except (ValueError, TypeError):
+        return None
 
 # -------------------- Routes --------------------
 @app.route('/')
@@ -180,7 +189,13 @@ def signup():
             recruiter = Recruiter(user_id=user.id, company_name=company_name, company_description=company_description)
             db.session.add(recruiter)
         
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Registration failed: {str(e)}', 'danger')
+            return redirect(url_for('signup'))
+        
         flash('Registration successful! Please login.', 'success')
         return redirect(url_for('login'))
     
@@ -248,10 +263,14 @@ def candidate_profile():
                     candidate.resume_filename = filename
                     flash('Resume uploaded successfully.', 'success')
                 else:
-                    flash('Invalid file type.', 'danger')
+                    flash('Invalid file type. Allowed: PDF, DOC, DOCX.', 'danger')
         
-        db.session.commit()
-        flash('Profile updated successfully.', 'success')
+        try:
+            db.session.commit()
+            flash('Profile updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating profile: {str(e)}', 'danger')
         return redirect(url_for('candidate_profile'))
     
     return render_template('candidate_profile.html', candidate=candidate)
@@ -274,8 +293,12 @@ def apply_job(job_id):
     
     application = Application(job_id=job_id, candidate_id=candidate.id)
     db.session.add(application)
-    db.session.commit()
-    flash('Application submitted successfully!', 'success')
+    try:
+        db.session.commit()
+        flash('Application submitted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error applying: {str(e)}', 'danger')
     return redirect(url_for('candidate_dashboard'))
 
 @app.route('/candidate/applications')
@@ -333,8 +356,12 @@ def post_job():
             recruiter_id=current_user.recruiter.id
         )
         db.session.add(job)
-        db.session.commit()
-        flash('Job posted successfully!', 'success')
+        try:
+            db.session.commit()
+            flash('Job posted successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error posting job: {str(e)}', 'danger')
         return redirect(url_for('recruiter_dashboard'))
     
     return render_template('post_job.html')
@@ -370,12 +397,23 @@ def search_candidates():
 def download_resume(candidate_id):
     candidate = Candidate.query.get_or_404(candidate_id)
     if candidate.resume_filename:
-        return send_from_directory(
-            app.config['UPLOAD_FOLDER'],
-            candidate.resume_filename,
-            as_attachment=True,
-            download_name=f"{candidate.full_name}_resume.pdf"
-        )
+        # Compatibility with Flask < 2.0 and >= 2.0
+        try:
+            # Flask 2.0+ uses download_name
+            return send_from_directory(
+                app.config['UPLOAD_FOLDER'],
+                candidate.resume_filename,
+                as_attachment=True,
+                download_name=f"{candidate.full_name}_resume.pdf"
+            )
+        except TypeError:
+            # Fallback for older Flask versions (1.x)
+            return send_from_directory(
+                app.config['UPLOAD_FOLDER'],
+                candidate.resume_filename,
+                as_attachment=True,
+                attachment_filename=f"{candidate.full_name}_resume.pdf"
+            )
     else:
         flash('No resume uploaded.', 'warning')
         return redirect(request.referrer or url_for('search_candidates'))
