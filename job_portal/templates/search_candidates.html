@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Search Candidates</h2>
+<form class="d-flex mb-4" action="{{ url_for('search_candidates') }}" method="GET">
+    <input class="form-control me-2" type="search" name="q" placeholder="Search by name or skills..."
+        value="{{ query }}" aria-label="Search">
+    <button class="btn btn-outline-primary" type="submit">Search</button>
+</form>
+<div class="row">
+    {% for candidate in candidates %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ candidate.full_name }}</h5>
+                <p class="card-text"><strong>Skills:</strong> {{ candidate.skills or 'Not specified' }}</p>
+                <p class="card-text"><strong>Phone:</strong> {{ candidate.phone or 'Not provided' }}</p>
+                {% if candidate.resume_filename %}
+                <a href="{{ url_for('download_resume', candidate_id=candidate.id) }}" class="btn btn-primary">Download
+                    Resume</a>
+                {% else %}
+                <button class="btn btn-secondary" disabled>No Resume</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">No candidates found.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

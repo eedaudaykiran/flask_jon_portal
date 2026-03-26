@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">My Profile</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('candidate_profile') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="full_name" class="form-control" value="{{ candidate.full_name }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" name="phone" class="form-control" value="{{ candidate.phone or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Skills (comma separated)</label>
+                        <textarea name="skills" class="form-control" rows="2">{{ candidate.skills or '' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Resume (PDF, DOC, DOCX)</label>
+                        {% if candidate.resume_filename %}
+                        <p class="text-success">Current resume: {{ candidate.resume_filename }}</p>
+                        {% endif %}
+                        <input type="file" name="resume" class="form-control" accept=".pdf,.doc,.docx">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

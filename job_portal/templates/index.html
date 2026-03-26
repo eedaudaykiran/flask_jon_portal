@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center text-center py-5">
+    <div class="col-md-8">
+        <h1 class="display-4">Find Your Dream Job</h1>
+        <p class="lead">Connect with top employers or find the best talent.</p>
+        <div class="mt-4">
+            <a href="{{ url_for('signup') }}" class="btn btn-primary btn-lg me-2">Get Started</a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-secondary btn-lg">Login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

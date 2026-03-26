@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>My Applications</h2>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Job Title</th>
+                <th>Company</th>
+                <th>Applied Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in applications %}
+            <tr>
+                <td>{{ app.job.title }}</td>
+                <td>{{ app.job.recruiter.company_name }}</td>
+                <td>{{ app.applied_date.strftime('%Y-%m-%d') }}</td>
+                <td><span
+                        class="badge bg-{{ 'warning' if app.status == 'pending' else 'success' if app.status == 'reviewed' else 'danger' }}">{{
+                        app.status|title }}</span></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center">You haven't applied to any jobs yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

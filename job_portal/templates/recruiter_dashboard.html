@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Welcome, {{ recruiter.company_name }}</h2>
+        <p>Manage your job postings below.</p>
+        <a href="{{ url_for('post_job') }}" class="btn btn-primary mb-3">Post New Job</a>
+        <div class="row">
+            {% for job in jobs %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ job.title }}</h5>
+                        <p class="card-text">{{ job.description[:150] }}{% if job.description|length > 150 %}...{% endif
+                            %}</p>
+                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> {{ job.location or 'Remote' }}</p>
+                        <p class="card-text"><small class="text-muted">Posted on {{ job.posted_date.strftime('%Y-%m-%d')
+                                }}</small></p>
+                        <a href="{{ url_for('view_applicants', job_id=job.id) }}" class="btn btn-outline-primary">View
+                            Applicants ({{ job.applications|length }})</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">You haven't posted any jobs yet. Click "Post New Job" to get started.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

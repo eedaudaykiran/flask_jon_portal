@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Welcome, {{ candidate.full_name }}!</h2>
+        <p>Explore job opportunities below.</p>
+        <form class="d-flex mb-4" action="{{ url_for('search_jobs') }}" method="GET">
+            <input class="form-control me-2" type="search" name="q"
+                placeholder="Search jobs by title, description, location..." aria-label="Search">
+            <button class="btn btn-outline-primary" type="submit">Search</button>
+        </form>
+        <div class="row">
+            {% for job in jobs %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ job.title }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ job.recruiter.company_name }}</h6>
+                        <p class="card-text">{{ job.description[:150] }}{% if job.description|length > 150 %}...{% endif
+                            %}</p>
+                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> {{ job.location or 'Remote' }}</p>
+                        <p class="card-text"><small class="text-muted">Posted on {{ job.posted_date.strftime('%Y-%m-%d')
+                                }}</small></p>
+                        {% if job.id in applied_job_ids %}
+                        <button class="btn btn-secondary" disabled>Applied</button>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('apply_job', job_id=job.id) }}">
+                            <button type="submit" class="btn btn-primary">Apply Now</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">No jobs found. Check back later!</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

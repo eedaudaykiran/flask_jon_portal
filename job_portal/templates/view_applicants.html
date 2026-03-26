@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Applicants for: {{ job.title }}</h2>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Candidate Name</th>
+                <th>Skills</th>
+                <th>Applied Date</th>
+                <th>Resume</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in applications %}
+            <tr>
+                <td>{{ app.candidate.full_name }}</td>
+                <td>{{ app.candidate.skills or 'Not provided' }}</td>
+                <td>{{ app.applied_date.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    {% if app.candidate.resume_filename %}
+                    <a href="{{ url_for('download_resume', candidate_id=app.candidate.id) }}"
+                        class="btn btn-sm btn-outline-primary">Download</a>
+                    {% else %}
+                    <span class="text-muted">No resume</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span
+                        class="badge bg-{{ 'warning' if app.status == 'pending' else 'success' if app.status == 'reviewed' else 'danger' }}">
+                        {{ app.status|title }}
+                    </span>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center">No applications yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<a href="{{ url_for('recruiter_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+{% endblock %}
